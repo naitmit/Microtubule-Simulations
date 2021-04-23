@@ -68,8 +68,7 @@ def tri_dist1(p_c,p1,p2):
 
 def tri_dist(p_c,p1,p2):
     '''
-    Distance from centre point p_c to line segment p1-p2 using Heron's formula
-    for the area
+    Distance from centre point p_c to line segment p1-p2
 
     Parameters
     ----------
@@ -140,17 +139,9 @@ def check_region(idx1,idx2,mt_list,t,r):
         else:
             mts,mtg = mt2, mt1
         dt1 = mtg.region_t[-1]-mtg.update_t[-1] #time mt2 grows
-        # dt2 = t-mt2.update_t[-1] #time mt2 grows
         seg2 = mts.seg #previous segment points
         for i in  range(len(seg2)-1):
             p1 = [mtg.seg[-1][0] + dt1*np.cos(mtg.angle[-1]),mtg.seg[-1][1] + dt1*np.sin(mtg.angle[-1])] #current point of second MT
-            # if i == len(seg2)-1: #dynamic ends need to be compared
-            #     p2 = [mts.seg[-1][0] + dt2*np.cos(mts.angle[-1]),mts.seg[-1][1] + dt2*np.sin(mts.angle[-1])] #current point of second MT
-            #     d = dist(p2, p1) #distance between them
-            #     # print(d,idx1,idx2,dt1,dt2)
-            #     if d<2*r: #possibly enters region
-            #         result = True
-            # else: #previously established segments
             d = tri_dist(p1, seg2[i], seg2[i+1])
             if d<r: #possibly enters region
                 result = True

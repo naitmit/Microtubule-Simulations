@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from parameters import v_s, xdomain, ydomain
 
-def plot_snap(mt_list,t,k,dest='./plots3/',save=True):
+def plot_snap(rank,mt_list,t,k,dest='./plots3/',save=True):
     l = len(mt_list)
     for i in range(l):
         coord = mt_list[i].seg #get coordinates of segments
@@ -73,16 +73,14 @@ def plot_snap(mt_list,t,k,dest='./plots3/',save=True):
                     plt.plot(x_f,y_f,color='cyan',linewidth=.5)
             else:
                 plt.scatter([x_seg[0]],[y_seg[0]],s=10,color='purple')
-                # print('sdsd')
                 
     plt.xlim(xdomain)
     plt.ylim(ydomain)
-    plt.title('Time {}, frame {}'.format(t,k))
-    # plt.legend()
+    plt.title('Rank{} at time {}, frame {}'.format(rank,t,k))
     plt.gca().set_aspect('equal',adjustable='box')
     figure = plt.gcf()
     figure.set_size_inches(10, 10)
-    name = 'plot_'+str(k)
+    name = str(rank)+'_plot_'+str(k)
     if save:
         plt.savefig(dest+name)
     plt.show()

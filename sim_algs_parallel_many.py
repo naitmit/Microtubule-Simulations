@@ -4,7 +4,7 @@
 Created on Wed Mar  3 23:12:47 2021
 
 @author: tim
-Simulation algorthims, with parallel edits for 2 processor case
+Simulation algorthims, with parallel edits for 2+ processor case
 """
 # from mpi4py import MPI
 import numpy as np
@@ -29,7 +29,6 @@ def nuc_t(t):
     Next nucleation time and nucleation point
 
     '''
-    # L= 40
     lx = xdomain[1]-xdomain[0]
     ly = ydomain[1]-ydomain[0]
     k = lx*ly*L**3*0.1/8#nucleation rate
@@ -38,7 +37,6 @@ def nuc_t(t):
     p = [x,y] #point
     dt = np.log(1/r)/k #new time
     T = t+dt
-    # T = np.infty
     return(T, p)
         
     
@@ -60,22 +58,14 @@ def update_event_list(rank, MT_list,event_list,t,pevent_list,del_mt,last_result,
     BE CAREFUL: THE DISTANCE RETURNED IN BDRY COLLISION IS DISTANCE OF PRESENT TIP TO BDRY, NOT 
     SEGMENT LENGTH!!!
     '''
-    r = tip_scaled*1.1 #radius
+    r = tip_scaled*0.5 #radius
     mt_index = [mt.number for mt in MT_list if mt.exist] #indices of active mts
-    # mts = max(mt_index)
-    # if rank ==1:
-    #     print('MAX ID EVENT', mts)
     n = len(mt_index)
     l = None
-    # print(t) 
     pair_list = None
     if t==0 or rewind: #calculate all possible pairs
         if rewind and t!= 0:
             event_list[:] = [x for x in event_list if x[2]=='nucleate'] #find all nucleation events
-            # nuc_list.sort(key=lambda x: x[3]) #sort according to time, keep earliest            
-            # event_list[:]= [nuc_list[0]]# [x for x in event_list if x[2]=='disap' and x[1] in mt_index] #empty event_list if it has been rewound
-            # if rank== 0:
-            #     print('Splicing: ',[x[1] for x in event_list])
         pair_list = list(it.combinations(mt_index,2)) #list of combinations of indices of MTs
         l = len(pair_list)
         
@@ -117,10 +107,8 @@ def update_event_list(rank, MT_list,event_list,t,pevent_list,del_mt,last_result,
                 new_idx = [last_result]
                 mt_index= [p for p in mt_index if ((p != last_result) \
                 and check_region(last_result,p,MT_list,t,r))] #for comparing new MT
-             
                 pair_list = list(it.product(mt_index,new_idx)) #generate new pairs
                 l = len(pair_list)
-                #Find bdry events
                 MT = MT_list[l_idx]
                 bdry_res = inter_bdry(rank,MT, MT_list) #find intersection info
                 next_time = bdry_res[0] + MT.update_t[-1] #time of collision
@@ -220,7 +208,6 @@ def update_event_list(rank, MT_list,event_list,t,pevent_list,del_mt,last_result,
                 new_idx = [last_result] #index of updated MTs
                 mt_index= [p for p in mt_index if check_region(last_result,p,MT_list,t,r)] #indices of new pairs to check over
                 n = len(mt_index)
-                # assert n == len(MT_list)-1
                 pair_list = list(it.product(mt_index,new_idx)) #generate new pairs
                 l = len(pair_list)
                 #bdry events
@@ -250,7 +237,6 @@ def update_event_list(rank, MT_list,event_list,t,pevent_list,del_mt,last_result,
                 event_list.append([False,new_idx[0],bdry_res[2],next_time,bdry_res[1]])
                 #Find region event
                 event_list.append([False,last_result,'new_region',t+r,None])
-            # start = time()
             for i in range(l): #compare all pairs
                 mt1_i = pair_list[i][0] #numbers of mts to compare
                 mt2_i = pair_list[i][1]
@@ -300,7 +286,7 @@ def update(rank,N,mt_list,collided,idxs,policy,dists,pt,t,cross_data):
         
         mt1 =mt_list[l_idx1]
         mt2 =mt_list[l_idx2]
-        # print(idx1,idx2)
+
         seg_idx = which_seg(mt1,mt2,t) #find segment of intersection
         r = rnd.randint(0, 1)
         zip_res = zip_cat(mt1.angle[-1],mt2.angle[seg_idx],pt,r) #zipper or not
@@ -332,7 +318,7 @@ def update(rank,N,mt_list,collided,idxs,policy,dists,pt,t,cross_data):
         elif mt1.from_bdry: #if it's an extension, must update previous MT
             mt_prev_idx = mt1.prev_mt 
             l_prev_idx = mt_to_l(mt_list, mt_prev_idx) #convert to list indices
-            # mt_prev = [mt for mt in mt_list if mt.prev_mt==prev_idx][0] #find prev mt
+
             mt_list[l_prev_idx].grow = False #it must shrink now
             mt_list[l_prev_idx].hit_bdry = False #no longer hitting bdry
             mt_list[l_prev_idx].update_t.append(dists) #update time of new bdry point now shrinking
@@ -347,16 +333,12 @@ def update(rank,N,mt_list,collided,idxs,policy,dists,pt,t,cross_data):
         mt_list[l_prev_idx].update_t.append(dists) #update time of new bdry point now shrinking
         return(mt1.prev_mt,crossing)
     elif policy == 'nucleate':
-        # if rank ==1:
-        #     print('NUCLEATING ID', N)
-        #TODO: NEED TO THINK ABOUT HOW TO DO THIS BETTER
         mt_idx = N
         mt_list.append(mt(mt_idx,rank)) #introduce new MT
         mt1 = mt_list[-1] 
         mt1.update_t[-1] = dists
         mt1.region_t.append(dists) #region change
         mt1.seg = [pt[0]] #assign points and angles
-        # th = rnd.uniform(0,2*np.pi)
         mt1.angle = [pt[1]]
         return(mt_idx,crossing)
     elif policy == 'cross_in':
@@ -384,7 +366,6 @@ def update(rank,N,mt_list,collided,idxs,policy,dists,pt,t,cross_data):
         
         mt1.update_t.append(dists) #update time
         mt1.region_t.append(dists) #region change
-        # print('forward', mt1.number, len(mt1.seg_dist))
         return(mt1.number,crossing)
     elif policy =='new_region': #new region, no MT change
         l_idx = mt_to_l(mt_list,idxs)
@@ -397,12 +378,10 @@ def update(rank,N,mt_list,collided,idxs,policy,dists,pt,t,cross_data):
         mt1.seg.append(pt) #update point
         th_og = mt1.angle[-1]
         mt1.angle.append(th_og)
-        # mt1.prev_t = mt1.update_t[-1] #record previous update time
         mt1.update_t.append(dists) #update time
         mt1.grow = False #no longer considered growing
         mt1.hit_bdry = True #hit bdry
         mt_idx = None
-        # px, py = pt[0], pt[1]
         segment_dist = dist(mt1.seg[-2],mt1.seg[-1])
         mt1.seg_dist.append(segment_dist) #segment length
         assert mt1.checkd()
@@ -429,7 +408,6 @@ def undo_update(rank, mt_list, pevent_list, event_list, del_mt):
     Time of rewinded step
 
     '''
-    #TODO UNDO REGION CHANGE: POP IN EACH ONE MT IS STILL GROWING AND ADD ITS OWN CATEGORY!!
     event = pevent_list[-1] #previous event
     idxs, policy = event[1], event[2] #event details
 
@@ -453,7 +431,6 @@ def undo_update(rank, mt_list, pevent_list, event_list, del_mt):
             mt1.region_t.pop(-1)
         else: #catastrophe
             mt1.grow = True #undo cat
-    # if collided is False: #if collision w/ bdry or deflection
     elif policy =='disap': #one has disappeared
         mt_idx1 = idxs
         l_idx1 = mt_to_l(mt_list, mt_idx1) #need to convert to indices in the list of existing mts
@@ -473,7 +450,6 @@ def undo_update(rank, mt_list, pevent_list, event_list, del_mt):
         if mt1.from_bdry and mt1.origin==rank: #if it's an extension, must un-update previous MT
             mt_prev_idx = mt1.prev_mt 
             l_prev_idx = mt_to_l(mt_list, mt_prev_idx) #convert to list indices
-            # mt_prev = [mt for mt in mt_list if mt.prev_mt==prev_idx][0] #find prev mt
             mt_list[l_prev_idx].grow = False #it must shrink now
             mt_list[l_prev_idx].hit_bdry = True #hitting bdry
             mt_list[l_prev_idx].update_t.pop(-1) #un-update time of new bdry point
@@ -592,7 +568,7 @@ def exit_data(rank, policy, idx, mt_list,t):
         data.append(mt2)
     return(data)
     
-
+#testing below
 if __name__ == '__main__':
     rank = 0
     rnd.seed(0)
@@ -638,13 +614,13 @@ if __name__ == '__main__':
         #     # print('MT timL: ', mt_t)
         #     print('Length of previous event list: ', len(pevent_list))
         #     print('Length of event list: ', len(event_list),'\n')
-        #     plot_snap(mt_list,t,i,'./plots2/',False)
+        #     plot_snap(rank,mt_list,t,i,'./plots2/',False)
         #     ti = time()
         #     # up_t = 0
         #     # mt_t = 0
         #     pevent_list = []
         if i >0:
-            plot_snap(mt_list,t,i,'./plots5/',False)
+            plot_snap(rank,mt_list,t,i,'./plots5/',False)
         # print(t, policy)
         Result = update_event_list(rank, mt_list, event_list,t,pevent_list,del_mt, last_result, policy,cross_data,rewind)
         rewind= False

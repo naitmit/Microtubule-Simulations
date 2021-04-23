@@ -264,7 +264,6 @@ def inter_bdry(rank,MT, MT_list):
         D1 = MT.tip_l
     elif MT.from_bdry: #from bdry
         if rank == MT.origin: #if from same processor, can look at it previous MTs
-            # print('BA')
             #TODO MIGHT NOT NEED THIS IF I REPLACE W/ prev_t
             idx = MT.prev_mt #index of prev MT
             l_idx = mt_to_l(MT_list, idx)#convert to list index
@@ -276,29 +275,20 @@ def inter_bdry(rank,MT, MT_list):
                     l_idx2 = mt_to_l(MT_list,MTp.prev_mt)#may need to consider ext of ext
                     MTp2 = MT_list[l_idx2]
                     tl = MTp.seg_dist[0] + (MTp2.update_t[-1] - MTp2.update_t[-2])#already grown
-                    D1 = MT.tip_l - tl#MTp.seg_dist[0]-(MTp2.update_t[-1] - MTp2.update_t[-2])
+                    D1 = MT.tip_l - tl
                 else: #previous MT is an extension from another process
                     tl = MT.update_t[-1] - MTp.prev_t #already grown
                     D1 = MT.tip_l - tl
-                # print(tl)
-                # print(mt_to_l(MT_list,MT.number),l_idx, l_idx2)
                 assert tl<= MT.tip_l
-                # print("SPECIAL CASE OCCURED")
                 assert D1>0
             else:
-                # print(MTp.seg, MTp.update_t, rank, MTp.origin)
                 D1 = MT.tip_l - (MTp.update_t[-1]- MTp.update_t[-2]) #tip length grown on new MT
                 assert D1>0
         else:
-            # if MT.prev_t is None:
-            #     print(MT.number, MT.origin)
-            #     print(MT.seg)
-            #     print(MT.update_t)
             D1 = MT.tip_l - MT.update_t[-1]+MT.prev_t #length left to grow
             assert D1>0
     # D1 = 1
     if D1<D: #if deflects before intersection w/ bdry
-        # print(D, D1)
         D = D1 #reassign
         wall = 'deflect' #keyword
         P[0] = p[0] + D1*np.cos(th) #deflected point
@@ -307,7 +297,6 @@ def inter_bdry(rank,MT, MT_list):
         print('MT has gone crazy: ', MT.number)
         print('Point: ', P)
         assert abs(P[0])<=xdomain[1] and abs(P[1])<=ydomain[1]
-    # print('Compare ', dist(MT.seg[-1],P),D1)
     return(D,P,wall)
 
 def compare(mt1,mt2,t):
@@ -321,7 +310,6 @@ def compare(mt1,mt2,t):
     -------
     Float. shortest time of next collision
     '''
-    #TODO DOUBLE CHECK THE CONDITIONS< MAY BE MISSING SOMETHINGS!!
     output = compare_return() #initiate output
     tol = 1e-15 #numerical tolerance for intersection distance, otherwise no intersection
     if (mt1.hit_bdry is True and mt2.hit_bdry is True) or \
@@ -334,8 +322,6 @@ def compare(mt1,mt2,t):
     elif (mt1.grow is False and mt2.grow is False): #IF BOTH SHRINKING
         output.policy='no_collision'
     elif (mt1.grow and mt2.grow) is True: #FIRST ONLY LOOKING AT BOTH GROWING
-        # if mt1.angle[-1]==mt2.angle[-1]:
-        #     output.policy ='no_collision'
         seg1, seg2 = mt1.seg, mt2.seg #assign segment points
         th1,th2 = mt1.angle, mt2.angle
         old_dist1, old_dist2 = mt1.seg_dist, mt2.seg_dist
@@ -355,7 +341,6 @@ def compare(mt1,mt2,t):
             p2 = seg2[i] #point traj to be collided with
             col_result = inter(p1_prev,p2,th1[l1-1],th2[i]) #collision results
             if col_result[0] is True:
-                # print(col_result[1])
                 d1, d2 = col_result[2][0], col_result[2][1] #distance to collision from mt1 and mt2
                 pt = col_result[1] #point of collision
                 if i==l2-1: #checking collision w/ the two growing ends
@@ -437,7 +422,6 @@ def compare(mt1,mt2,t):
 
         mt2_l = np.sum(old_dist2)#total length of shrinking mt, cannot got lower than this
         col_dist1t2 = [mt2_l/v_s - (t-t_prev2)] #collision distances from 1 to 2, growing can only collide w/ shrinking
-        # print(mt2_l/v_s, (t-t_prev2),mts.number)
         point_1t2 = [[0,0]]
         #We now check if mt1 collides w/ any segments of mt2
         for i in range(l2-1):
@@ -445,7 +429,6 @@ def compare(mt1,mt2,t):
                 p2 = seg2[i] #point traj to be collided with
                 col_result = inter(p1_prev,p2,th1[l1-1],th2[i]) #collision results
                 if col_result[0] is True:
-                    # print(col_result[1])
                     d1, d2 = col_result[2][0], col_result[2][1] #distance to collision from mt1 and mt2
                     if d2<= old_dist2[i]: #has to collide on segment
                         d_g = d1 - (t-t_prev1) #distance of mt1 collision, also time taken to grow this
@@ -486,7 +469,6 @@ def compare(mt1,mt2,t):
                 output.policy = '2hit1'
             else:
                 output.policy = '1hit2'
-        # print('one shrinking:', mt1.number,mt2.number)
     elif (mt1.hit_bdry or mt2.hit_bdry) is True: #IF ONE IS GROWING AND ONE IS ON THE BORDER
         assert (mt1.grow or mt2.grow) is True
         which = None
@@ -504,22 +486,17 @@ def compare(mt1,mt2,t):
         t_prev1, p1_prev = mtg.update_t[-1], seg1[l1-1] #last updated point and time
         t_prev2, p2_prev = mtb.update_t[-1], seg2[l2-1] #last updated point and time
         assert(len(old_dist1) == len(seg1)-1 and len(old_dist2) == len(seg2)-1)
-        # print(mt1.number,mt2.number)
         assert mt1.checkd() and mt2.checkd()
         col_dist1t2 = [] #collision distances from 1 to 2
         point_1t2 = [] #store their respective collision locations
         neg_dist = 0
-        # print('p1 ',p1_prev)
         #We now check if mt1 collides w/ any segments of mt2
         for i in range(l2-1):
             p2 = seg2[i] #point traj to be collided with
-            # print('p2 ', p2)
             col_result = inter(p1_prev,p2,th1[l1-1],th2[i]) #collision results
             if col_result[0] is True:
-                # print(p2, col_result[1])
                 d1, d2 = col_result[2][0], col_result[2][1] #distance to collision from mt1 and mt2
                 pt = col_result[1]
-                # print(d1,d2,old_dist2[i])
                 if d2<= old_dist2[i]: #must be less than segment length for collision
                     d_g = d1-(t-t_prev1) #total distance grown since t
                     if d_g<= tol:
@@ -537,7 +514,6 @@ def compare(mt1,mt2,t):
                 output.policy = '2hit1'
             else:
                 output.policy = '1hit2'
-    # print(type(output.point))
     if output.policy != 'no_collision':
         assert output.dist > tol
             # output.policy = 'no_collision'
@@ -581,12 +557,6 @@ def which_seg(mt1,mt2,t):
                     d_g2 = d2 - (t-t_prev2)
                     d_g = max(d_g1,d_g2) #distance grown by mt's is always max
                     if d_g==d_g1: #we know mt1 intersects w/ mt2, don't care if mt2 intersects w/ mt1 here
-                        # print(d_g1,d_g2)
-                        # print(mt1.number,mt2.number,l2)
-                        # print(col_result)
-                        # print(t-t_prev2)
-                        # print(t-t_prev1)
-                        # assert d_g==d_g1#store whichever collides with which
                         col_dist1t2.append(d_g) #store distances and respective segment indices
                         seg2_idx.append(i)
                 else:#check intersection of mt1 head w/ previous mt2 segments
@@ -606,13 +576,11 @@ def which_seg(mt1,mt2,t):
         l1, l2 = len(seg1), len(seg2) #for indexing
         t_prev1, p1_prev = mtg.update_t[-1], seg1[l1-1] #last updated point and time
         t_prev2 = mts.update_t[-1] #last updated point and time
-        # t_prev2, p2_prev = mts.update_t, seg2[l2-1] #last updated point and time
 
         assert(len(old_dist1) == len(seg1)-1 and len(old_dist2) == len(seg2)-1)
 
         mt2_l = np.sum(old_dist2)#total length of shrinking mt, cannot got lower than this
         col_dist1t2 = [mt2_l/v_s - (t-t_prev2)] #collision distances from 1 to 2, growing can only collide w/ shrinking
-        # point_1t2 = [[0,0]]
         assert mt2_l/v_s - (t-t_prev2) >= 0
         seg2_idx = [0] #indices of collision segments
         #We now check if mt1 collides w/ any segments of mt2
@@ -647,7 +615,6 @@ def which_seg(mt1,mt2,t):
                         if d2< d_segf: #if shrank to less than intersection distance
                             col_dist1t2.append(d_g)
                             seg2_idx.append(i)
-                            # point_1t2.append(col_result[1])
         i_1t2 = np.argmin(col_dist1t2)
         index = seg2_idx[i_1t2]
     elif (mt1.hit_bdry or mt2.hit_bdry) is True: #IF ONE IS GROWING AND ONE IS ON THE BORDER
@@ -662,19 +629,15 @@ def which_seg(mt1,mt2,t):
         t_prev2= mtb.update_t[-1] #last updated point and time
 
         assert(len(old_dist1) == len(seg1)-1 and len(old_dist2) == len(seg2)-1)
-        assert mt1.checkd() and mt2.checkd()
+        # assert mt1.checkd() and mt2.checkd()
         col_dist1t2 = [] #collision distances from 1 to 2
         seg2_idx = []
-        # print('p1 ',p1_prev)
         #We now check if mt1 collides w/ any segments of mt2
         for i in range(l2-1):
             p2 = seg2[i] #point traj to be collided with
-            # print('p2 ', p2)
             col_result = inter(p1_prev,p2,th1[l1-1],th2[i]) #collision results
             if col_result[0] is True:
-                # print(p2, col_result[1])
                 d1, d2 = col_result[2][0], col_result[2][1] #distance to collision from mt1 and mt2
-                # print(d1,d2,old_dist2[i])
                 if d2<= old_dist2[i]: #must be less than segment length for collision
                     d_g = d1-(t-t_prev1) #total distance grown since t
                     col_dist1t2.append(d_g) #store collision distance

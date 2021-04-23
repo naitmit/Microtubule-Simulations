@@ -60,22 +60,14 @@ def update_event_list(rank, MT_list,event_list,t,pevent_list,del_mt,last_result,
     BE CAREFUL: THE DISTANCE RETURNED IN BDRY COLLISION IS DISTANCE OF PRESENT TIP TO BDRY, NOT 
     SEGMENT LENGTH!!!
     '''
-    r = tip_scaled*1.1 #radius
+    r = tip_scaled*0.5 #radius
     mt_index = [mt.number for mt in MT_list if mt.exist] #indices of active mts
-    # mts = max(mt_index)
-    # if rank ==1:
-    #     print('MAX ID EVENT', mts)
     n = len(mt_index)
     l = None
-    # print(t) 
     pair_list = None
     if t==0 or rewind: #calculate all possible pairs
         if rewind:
             event_list[:] = [x for x in event_list if x[2]=='nucleate'] #find all nucleation events
-            # nuc_list.sort(key=lambda x: x[3]) #sort according to time, keep earliest            
-            # event_list[:]= [nuc_list[0]]# [x for x in event_list if x[2]=='disap' and x[1] in mt_index] #empty event_list if it has been rewound
-            # if rank== 0:
-            #     print('Splicing: ',[x[1] for x in event_list])
         pair_list = list(it.combinations(mt_index,2)) #list of combinations of indices of MTs
         l = len(pair_list)
         
@@ -119,7 +111,6 @@ def update_event_list(rank, MT_list,event_list,t,pevent_list,del_mt,last_result,
                 l = len(pair_list)
                 event_list[:] = [x for x in event_list if valid_events(x,old_idx)] #discard all invalid events
                 #Find bdry events
-                # l_idx = mt_to_l(MT_list, last_result)
                 MT = MT_list[l_idx]
                 bdry_res = inter_bdry(rank, MT, MT_list) #find intersection info
                 next_time = bdry_res[0] + MT.update_t[-1] #time of collision
@@ -234,7 +225,6 @@ def update_event_list(rank, MT_list,event_list,t,pevent_list,del_mt,last_result,
                 new_idx = [last_result] #index of updated MTs
                 mt_index= [p for p in mt_index if check_region(last_result,p,MT_list,t,r)] #indices of new pairs to check over
                 n = len(mt_index)
-                # assert n == len(MT_list)-1
                 pair_list = list(it.product(mt_index,new_idx)) #generate new pairs
                 l = len(pair_list)
                 #bdry events
@@ -264,7 +254,6 @@ def update_event_list(rank, MT_list,event_list,t,pevent_list,del_mt,last_result,
                 event_list.append([False,new_idx[0],bdry_res[2],next_time,bdry_res[1]])
                 #Find region event
                 event_list.append([False,last_result,'new_region',t+r,None])
-            # start = time()
             for i in range(l): #compare all pairs
                 mt1_i = pair_list[i][0] #numbers of mts to compare
                 mt2_i = pair_list[i][1]
@@ -275,13 +264,8 @@ def update_event_list(rank, MT_list,event_list,t,pevent_list,del_mt,last_result,
                     assert result.dist >=0 and MT_list[l_mt1].exist and MT_list[l_mt2].exist
                     next_time = result.dist+t
                     event_list.append([True,pair_list[i],result.policy,next_time,result.point]) #apend event details
-            # print(pair_list)
-            # print('List time: ', time()-start,l)
     event_list.sort(key=lambda x: x[3]) #sort according to time
     pevent_list.append(event_list[0])#record event occurance
-    # min_event = min(event_list, key=lambda x: x[3])
-    # event_list.insert(0, event_list.pop(event_list.index(min_event)))
-    # pevent_list.append(min_event)#record event occurance
     return(event_list[0])
     
 
@@ -319,7 +303,6 @@ def update(rank,N,mt_list,collided,idxs,policy,dists,pt,t,cross_data):
         
         mt1 =mt_list[l_idx1]
         mt2 =mt_list[l_idx2]
-        # print(idx1,idx2)
         seg_idx = which_seg(mt1,mt2,t) #find segment of intersection
         r = rnd.randint(0, 1)
         zip_res = zip_cat(mt1.angle[-1],mt2.angle[seg_idx],pt,r) #zipper or not
@@ -337,15 +320,10 @@ def update(rank,N,mt_list,collided,idxs,policy,dists,pt,t,cross_data):
     # if collided is False: #if collision w/ bdry or deflection
     elif policy in ['disap']: #one has disappeared
         mt_idx1 = idxs
-        # mts = max([x.number for x in mt_list if x.exist])
-        # print('MAX MT ID', mts, 'vs', idxs)
         l_idx1 = mt_to_l(mt_list, mt_idx1) #need to convert to indices in the list of existing mts
         assert l_idx1 >= 0
         mt1 =mt_list[l_idx1]
         mt1.exist = False #has disappeared
-        # if rank == 0:
-        #     print('SHOULD DISAP AT TIME', t)
-        #     print('FROM RANK', mt1.origin)
         mt1.disap_t = dists
         mt1.update_t.append(dists)
         '''PARALLEL EDIT START'''
@@ -356,12 +334,9 @@ def update(rank,N,mt_list,collided,idxs,policy,dists,pt,t,cross_data):
         elif mt1.from_bdry: #if it's an extension, must update previous MT
             mt_prev_idx = mt1.prev_mt 
             l_prev_idx = mt_to_l(mt_list, mt_prev_idx) #convert to list indices
-            # mt_prev = [mt for mt in mt_list if mt.prev_mt==prev_idx][0] #find prev mt
             mt_list[l_prev_idx].grow = False #it must shrink now
             mt_list[l_prev_idx].hit_bdry = False #no longer hitting bdry
             mt_list[l_prev_idx].update_t.append(dists) #update time of new bdry point now shrinking
-    
-            # print('previous index', prev_idx)
         return(mt_idx1,crossing)
     elif policy == 'shrink_in':
         mt1 = cross_data[1]
@@ -371,8 +346,6 @@ def update(rank,N,mt_list,collided,idxs,policy,dists,pt,t,cross_data):
         mt_list[l_prev_idx].update_t.append(dists) #update time of new bdry point now shrinking
         return(mt1.prev_mt,crossing)
     elif policy == 'nucleate':
-        # if rank ==1:
-        #     print('NUCLEATING ID', N)
         #TODO: NEED TO THINK ABOUT HOW TO DO THIS BETTER
         mt_idx = N
         mt_list.append(mt(mt_idx,rank)) #introduce new MT
@@ -380,7 +353,6 @@ def update(rank,N,mt_list,collided,idxs,policy,dists,pt,t,cross_data):
         mt1.update_t.append(dists)
         mt1.region_t.append(dists) #region change
         mt1.seg = [pt[0]] #assign points and angles
-        # th = rnd.uniform(0,2*np.pi)
         mt1.angle = [pt[1]]
         return(mt_idx,crossing)
     elif policy == 'cross_in':
@@ -391,10 +363,6 @@ def update(rank,N,mt_list,collided,idxs,policy,dists,pt,t,cross_data):
         mt_list.append(mt1)
         return(N, crossing)
     elif policy =='deflect':
-        # if rank ==1:
-        #     mts = max([x.number for x in mt_list if x.exist])
-        #     print('MAX ID UPDATE', mts)
-        #     assert idxs <= mts
         l_idx = mt_to_l(mt_list,idxs)#convert to list index
         
         mt1 = mt_list[l_idx] #mt to be updated
@@ -414,7 +382,6 @@ def update(rank,N,mt_list,collided,idxs,policy,dists,pt,t,cross_data):
         
         mt1.update_t.append(dists) #update time
         mt1.region_t.append(dists) #region change
-        # print('forward', mt1.number, len(mt1.seg_dist))
         return(mt1.number,crossing)
     elif policy =='new_region': #new region, no MT change
         l_idx = mt_to_l(mt_list,idxs)
@@ -427,7 +394,6 @@ def update(rank,N,mt_list,collided,idxs,policy,dists,pt,t,cross_data):
         mt1.seg.append(pt) #update point
         th_og = mt1.angle[-1]
         mt1.angle.append(th_og)
-        # mt1.prev_t = mt1.update_t[-1] #record previous update time
         mt1.update_t.append(dists) #update time
         mt1.grow = False #no longer considered growing
         mt1.hit_bdry = True #hit bdry
@@ -487,7 +453,6 @@ def undo_update(rank, mt_list, pevent_list, event_list, del_mt):
     event = pevent_list[-1] #previous event
     idxs, policy = event[1], event[2] #event details
 
-    # if collided is True: #if dynamic ends collided
     assert policy not in ['shrink_in','comm','cross_in']
     if policy =='1hit2' or policy=='2hit1':
         if policy == '1hit2':
@@ -521,14 +486,12 @@ def undo_update(rank, mt_list, pevent_list, event_list, del_mt):
             del_mt.pop(ldel_idx) #delete from deleted mt list
             mt_list.append(mt1) #re-introduce to mtlist
         assert mt1.number == idxs
-        # print(mt1.number)
         mt1.exist = True #has un-dissapeared
         mt1.disap_t = None #undo this
         mt1.update_t.pop(-1)
         if mt1.from_bdry and mt1.origin==rank: #if it's an extension, must un-update previous MT
             mt_prev_idx = mt1.prev_mt 
             l_prev_idx = mt_to_l(mt_list, mt_prev_idx) #convert to list indices
-            # mt_prev = [mt for mt in mt_list if mt.prev_mt==prev_idx][0] #find prev mt
             mt_list[l_prev_idx].grow = False #it must shrink now
             mt_list[l_prev_idx].hit_bdry = True #hitting bdry
             mt_list[l_prev_idx].update_t.pop(-1) #un-update time of new bdry point
@@ -549,7 +512,6 @@ def undo_update(rank, mt_list, pevent_list, event_list, del_mt):
     elif policy =='deflect':
         l_idx = mt_to_l(mt_list,idxs)#convert to list index
         mt1 = mt_list[l_idx] #mt to be updated
-        # print('backward',mt1.number, len(mt1.seg_dist))
         mt1.seg.pop(-1) #un-update point
         mt1.angle.pop(-1)
         mt1.seg_dist.pop(-1) #segment length
@@ -627,8 +589,6 @@ def exit_data(rank, policy, idx, mt_list,t):
         mt2.prev_mt = idx
         mt2.update_t[-1] = t#give update time
         mt2.region_t = [t]
-        # if mt1.from_bdry: #if from boundary, need to prescribe prev. time of traj. change
-        # assert mt1.origin==rank
         if len(mt1.seg) > 2: #it changed trajectory before hitting bdry
             mt2.prev_t = mt1.update_t[-2]
         else:
@@ -647,7 +607,7 @@ def exit_data(rank, policy, idx, mt_list,t):
         data.append(mt2)
     return(data)
     
-
+#testing below
 if __name__ == '__main__':
     rank = 0
     rnd.seed(0)
@@ -693,7 +653,7 @@ if __name__ == '__main__':
             # print('MT timL: ', mt_t)
             print('Length of previous event list: ', len(pevent_list))
             print('Length of event list: ', len(event_list),'\n')
-            plot_snap(mt_list,t,i,'./plots2/',False)
+            plot_snap(rank,mt_list,t,i,'./plots2/',False)
             ti = time()
             # up_t = 0
             # mt_t = 0
