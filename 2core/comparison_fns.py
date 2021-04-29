@@ -309,7 +309,7 @@ def compare(mt1,mt2,t):
     '''
     #TODO DOUBLE CHECK THE CONDITIONS< MAY BE MISSING SOMETHINGS!!
     output = compare_return() #initiate output
-    tol = 1e-15 #numerical tolerance for intersection distance, otherwise no intersection
+    tol = 1e-10#numerical tolerance for intersection distance, otherwise no intersection
     if (mt1.hit_bdry is True and mt2.hit_bdry is True) or \
        (mt1.exist is False or mt2.exist is False) or (mt1.hit_bdry is True and mt2.grow is False) or\
        (mt2.hit_bdry is True and mt1.grow is False):

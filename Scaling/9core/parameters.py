@@ -11,5 +11,8 @@ tip_length = 8 #in micrometers
 tip_scaled = tip_length/L #scaled tip length
 v_s = 2 #scaled speed, growth is set to 1
 
-xdomain = [0,0.5] #scaled domain
+xdomain = [0,1] #scaled domain
 ydomain = [0,1]
+
+#If using more than 2 processors
+grid =[3,3] #lxw of thread

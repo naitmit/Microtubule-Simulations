@@ -583,7 +583,7 @@ if __name__ == '__main__':
         mt_list[i].region_t.append(0)
     
     t = 0
-    T = 0.2
+    T = 100
     start = time()
     event_list = []
     pevent_list = []#past events
@@ -593,7 +593,6 @@ if __name__ == '__main__':
     policy = None
     rewind = False
     i=0
-    crossings = 0
     # up_t = 0
     # mt_t = 0
     conv = L/0.08 #time conversion factor
@@ -603,53 +602,42 @@ if __name__ == '__main__':
     start = time()
     ti = 0
     tf = 0
+    i1,i2 = 0,0
     print('Simulating on', xdomain,'x',ydomain)
-    # while t< T:
-    while i< 100:
-        # if i>0:
-        #     tf = time()
-        #     print('Sim time: ', t)
-        #     print('Wall time elapsed: ',tf-ti)
-        #     # print('Update time: ',up_t)
-        #     # print('MT timL: ', mt_t)
-        #     print('Length of previous event list: ', len(pevent_list))
-        #     print('Length of event list: ', len(event_list),'\n')
-        #     plot_snap(rank,mt_list,t,i,'./plots2/',False)
-        #     ti = time()
-        #     # up_t = 0
-        #     # mt_t = 0
-        #     pevent_list = []
-        if i >0:
-            plot_snap(rank,mt_list,t,i,'./plots5/',False)
-        # print(t, policy)
+    print('Simulate to time', T)
+    print('Length of', L, 'microm \n')
+    while t*conv< T:
+        i2 = np.floor(t*conv/10) 
+        if i2 != i1:
+            tf = time()
+            print('Sim time (s): ', t*conv)
+            print('Wall time elapsed (s): ',tf-ti)
+            print('Length of previous event list: ', len(pevent_list))
+            print('Length of event list: ', len(event_list),'\n')
+            # plot_snap(rank,mt_list,t,i,'./plots2/',False)
+            ti = time()
+            i1 = i2
+        # if i >0:
+        #     plot_snap(rank,mt_list,t,i,'./plots5/',False)
         Result = update_event_list(rank, mt_list, event_list,t,pevent_list,del_mt, last_result, policy,cross_data,rewind)
         rewind= False
         policy = Result[2]
+        if Result[3]*conv > T:
+            plot_snap(0, mt_list, t,i,dest='./', save=False)
         update_return = update(rank,N,mt_list,Result[0],Result[1],Result[2], Result[3], Result[4],t,cross_data)
         last_result = update_return[0]
+        t1 = Result[3]
         t = Result[3]
         if update_return[1]: #if there's a crossing
-            # print(t)
-            # break
             cross_data = exit_data(rank, policy, last_result, mt_list,t) #package data to be transferred
-            # i+=1
-            # if i > 0:
-            #     plot_snap(mt_list,t,i,'./plots5/',False)
             update_event_list(rank, mt_list, event_list,t,pevent_list,del_mt, last_result, policy,cross_data,rewind) #update list with previous changed MT
-            # policy = 'comm' #policy will be used to add the new event to list
+            policy = 'comm' #policy will be used to add the new event to list
+            j+=1
         if policy in ['nucleate', 'top','bottom','cross_in']:
             N+=1
         i+=1
-    # while i>1: #undoing stuff
-    #     i-= 1
-    #     t = undo_update(rank, mt_list, pevent_list)
-    #     # if i%100==0:
-    #     plot_snap(mt_list,t,i,'./plots5/',False)
-    #     rewind=True
-    #     #     j+=1
-    #     # if j ==5:
-    #     #     break
     end = time()
-    # print('Percent of crossings: ', crossings/i)
+    print('Total steps: ', i)
+    print('Percent of crossings: ', j)
     print('Total time: ',end-start)
     

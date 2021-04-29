@@ -60,7 +60,7 @@ def update_event_list(rank, MT_list,event_list,t,pevent_list,del_mt,last_result,
     BE CAREFUL: THE DISTANCE RETURNED IN BDRY COLLISION IS DISTANCE OF PRESENT TIP TO BDRY, NOT 
     SEGMENT LENGTH!!!
     '''
-    r = tip_scaled*0.5 #radius
+    r = tip_scaled*1.1 #radius
     mt_index = [mt.number for mt in MT_list if mt.exist] #indices of active mts
     n = len(mt_index)
     l = None
@@ -348,9 +348,10 @@ def update(rank,N,mt_list,collided,idxs,policy,dists,pt,t,cross_data):
     elif policy == 'nucleate':
         #TODO: NEED TO THINK ABOUT HOW TO DO THIS BETTER
         mt_idx = N
+        print('RANK', rank, 'NUCLEATES', N, dists)
         mt_list.append(mt(mt_idx,rank)) #introduce new MT
         mt1 = mt_list[-1] 
-        mt1.update_t.append(dists)
+        mt1.update_t[-1] = (dists)
         mt1.region_t.append(dists) #region change
         mt1.seg = [pt[0]] #assign points and angles
         mt1.angle = [pt[1]]
@@ -497,10 +498,11 @@ def undo_update(rank, mt_list, pevent_list, event_list, del_mt):
             mt_list[l_prev_idx].update_t.pop(-1) #un-update time of new bdry point
     elif policy == 'nucleate':
         t = event[3] #in a nucleation event, we do not know the MT index ahead of time
+        print('RANK', rank, 'UNDO', t)
         mt_list2 = [mt for mt in mt_list if mt.update_t[-1]==t] #must find the MT this way
         assert len(mt_list2)==1
-        
         mt_idx = mt_list2[0].number #new mt number
+        print('INDEX =', mt_idx)
         l_idx = mt_to_l(mt_list, mt_idx) #index in list
         assert l_idx >= 0
         mt_list.pop(l_idx) #un-introduce new MT
@@ -643,23 +645,23 @@ if __name__ == '__main__':
     ti = 0
     tf = 0
     print('Simulating on', xdomain,'x',ydomain)
-    while t< T:
-    # while i< 10:
-        if i%100==0:
-            tf = time()
-            print('Sim time: ', t)
-            print('Wall time elapsed: ',tf-ti)
-            # print('Update time: ',up_t)
-            # print('MT timL: ', mt_t)
-            print('Length of previous event list: ', len(pevent_list))
-            print('Length of event list: ', len(event_list),'\n')
-            plot_snap(rank,mt_list,t,i,'./plots2/',False)
-            ti = time()
-            # up_t = 0
-            # mt_t = 0
-            pevent_list = []
-        # if i >0:
-        #     plot_snap(mt_list,t,i,'./plots5/',False)
+    # while t< T:
+    while i< 100:
+        # if i%100==0:
+        #     tf = time()
+        #     print('Sim time: ', t)
+        #     print('Wall time elapsed: ',tf-ti)
+        #     # print('Update time: ',up_t)
+        #     # print('MT timL: ', mt_t)
+        #     print('Length of previous event list: ', len(pevent_list))
+        #     print('Length of event list: ', len(event_list),'\n')
+        #     plot_snap(rank,mt_list,t,i,'./plots2/',False)
+        #     ti = time()
+        #     # up_t = 0
+        #     # mt_t = 0
+        #     pevent_list = []
+        if i >0:
+            plot_snap(rank,mt_list,t,i,'./plots5/',False)
         # print(t, policy)
         Result = update_event_list(rank, mt_list, event_list,t,pevent_list,del_mt, last_result, policy,cross_data,rewind)
         rewind= False

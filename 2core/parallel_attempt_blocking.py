@@ -3,9 +3,9 @@ from comparison_fns import mt
 import numpy as np
 import random as rnd
 from time import time
-from sim_algs_parallel import plot_snap,update_event_list,update, exit_data, undo_update
+from sim_algs_parallel import update_event_list,update, exit_data, undo_update
 import sys
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 from time import sleep
 from parameters import xdomain, ydomain
 
@@ -43,39 +43,43 @@ policy = None
 rewind = False
 i=0
 crossings = 0
-# up_t = 0
-# mt_t = 0
 L = 40
 conv = L/0.08 #time conversion factor
 cross_data = None
 dest_ = (rank+1)%2
 source_ = dest_
-T=0.2
-troubleshoot = 0.201 #when to start printing statements for touble shooting
+T=600
+troubleshoot = 100000 #when to start printing statements for touble shooting
+
 start = MPI.Wtime()
 t1 = MPI.Wtime()
-while t < T:
-    if i%200==0:
-        if rank == 0: #plotting
-            print('Simulating on', xdomain,'x',ydomain)
+t2 = MPI.Wtime()
+
+if rank == 0:
+    print('Simulating on', xdomain,'x',ydomain, 'with real length (microm)', L)
+    print('Simulating until (s):', T)
+    print('Processor grid:', [1,2],'\n')
+    sys.stdout.flush()
+
+i1, i1 = 0,0 #for timing
+while t*conv < T:
+    if rank==0:
+        i2 = np.floor(t*conv/10) #prints every ten seconds simulated
+        if i2 != i1 and i2>i1: #needed to include the rewinding
             t2 = MPI.Wtime()
-            print('Rank 0 at time', t)
-            print('Elapsed time:', t2-t1)
+            print('Rank 0 at real time (s)', t*conv)
+            print('Elapsed wall time (s):', t2-t1)
             print('Length of previous event list: ', len(pevent_list))
             print('Length of event list: ', len(event_list),'\n')
             sys.stdout.flush()
             t1 = MPI.Wtime()
-            # print([x[3] for x in event_list if x[2]=='disap'])
-            # plot_snap(mt_list,t,i,'./rank0/')
-        # else:
-        #     plot_snap(mt_list,t,i,'./rank1/')
+            i1 = i2
     next_event = update_event_list(rank, mt_list, event_list,t,pevent_list,del_mt, changed_mt, policy,cross_data,rewind)
     rewind= False
-    # if (rank == 1) and (t> troubleshoot):
-    #     print('NEW EVENT TO BE UPDATED')
-    #     print('Rank', rank, 'at time', t, next_event[2],event_list[0][1])
-    #     print('BLAH2', [x[2] for x in event_list if x[2] in ['shrink_in','cross_in']])
+    # if Result[3]*conv > T:
+    #     print('Rank', rank, 'plotting')
     #     sys.stdout.flush()
+    #     plot_snap(rank, mt_list, t,i,dest='./', save=True)
     update_return = update(rank,N,mt_list,next_event[0],next_event[1],next_event[2], next_event[3], next_event[4],t,cross_data)
     changed_mt = update_return[0]
     policy = next_event[2]

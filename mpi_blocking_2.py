@@ -6,7 +6,7 @@ from time import time
 from sim_algs_parallel import update_event_list,update, exit_data, undo_update
 from plotting import plot_snap
 import sys
-from parameters import xdomain, ydomain
+from parameters import xdomain, ydomain, L
 
 comm = MPI.COMM_WORLD
 size = comm.Get_size()
@@ -14,8 +14,6 @@ rank = comm.Get_rank()
 
 print("Process has started:",rank)
 sys.stdout.flush()
-
-
 
 rnd.seed(rank)
 N = 3#number of MTs
@@ -37,53 +35,40 @@ cross_data = None
 changed_mt = None
 policy = None
 rewind = False
+cross_data = None
+
 i=0
 crossings = 0
 # up_t = 0
 # mt_t = 0
-L = 40
 conv = L/0.08 #time conversion factor
-cross_data = None
-dest_ = (rank+1)%2
-source_ = dest_
-T=5
-troubleshoot = 0.201 #when to start printing statements for touble shooting
+T=300
+troubleshoot = 0 #when to start printing statements for touble shooting
 start = MPI.Wtime()
 t1 = MPI.Wtime()
-while t < T:
-    if i%200==0:
-        if rank == 0: #plotting
-            print('Simulating on', xdomain,'x',ydomain)
-            t2 = MPI.Wtime()
-            print('Rank 0 at time', t)
-            print('Elapsed time:', t2-t1)
-            print('Length of previous event list: ', len(pevent_list))
-            print('Length of event list: ', len(event_list),'\n')
-            sys.stdout.flush()
-            t1 = MPI.Wtime()
-            # print([x[3] for x in event_list if x[2]=='disap'])
-            # plot_snap(mt_list,t,i,'./rank0/')
+while t < 2:
+    if i%200==0 and rank == 0:
+        print('Simulating on', xdomain,'x',ydomain)
+        t2 = MPI.Wtime()
+        print('Rank 0 at time', t)
+        print('Elapsed time:', t2-t1)
+        print('Length of previous event list: ', len(pevent_list))
+        print('Length of event list: ', len(event_list),'\n')
+        sys.stdout.flush()
+        t1 = MPI.Wtime()
+        # print([x[3] for x in event_list if x[2]=='disap'])
+        # plot_snap(mt_list,t,i,'./rank0/')
         # else:
         #     plot_snap(mt_list,t,i,'./rank1/')
+    if rank == 0:
+        print(policy, t)
+        sys.stdout.flush()
     next_event = update_event_list(rank, mt_list, event_list,t,pevent_list,del_mt, changed_mt, policy,cross_data,rewind)
     rewind= False
-    # if (rank == 1) and (t> troubleshoot):
-    #     print('NEW EVENT TO BE UPDATED')
-    #     print('Rank', rank, 'at time', t, next_event[2],event_list[0][1])
-    #     print('BLAH2', [x[2] for x in event_list if x[2] in ['shrink_in','cross_in']])
-    #     sys.stdout.flush()
     update_return = update(rank,N,mt_list,next_event[0],next_event[1],next_event[2], next_event[3], next_event[4],t,cross_data)
     changed_mt = update_return[0]
     policy = next_event[2]
     t = next_event[3]
-    # testing = [x for x in event_list if x[2] in ['cross_in','shrink_in'] ]
-    # if len(testing) >0:
-    #     print('Rank:',rank,'event list',len(testing))
-    #     print('Earliest event:', event_list[0])
-    #     print('Supposed crossing:',testing)
-    #     times = [x[3] for x in event_list]
-    #     print('Event times: ', times)
-    #     assert event_list[0][2] in ['cross_in', 'shrink_in']
     i+=1
     '''///Sending Procedure///'''
     if update_return[1] or t>=T: #inform of t>T or crossing events
@@ -95,12 +80,11 @@ while t < T:
             if (t> troubleshoot):
                 print('Rank', rank, 'has crossed at time', t,'sending info now')
                 sys.stdout.flush()
-            # if (t> troubleshoot):
-            #     print('Policy before sent',policy)
-            #     sys.stdout.flush()
+            if (t> troubleshoot):
+                print('Policy before sent',policy)
+                sys.stdout.flush()
 
             comm.send(cross_data,dest=0, tag=0)
-            # print('Rank', rank, 'waiting for confirmation')
             confirm = comm.recv(source=0,tag=1) #get confirmation that other process can catch up
             if len(confirm) == 1: #only when both processes are done
                 print('Rank', rank, 'has recieved confirmation of simluation completion at step ',i,'. Shutting down.')
@@ -109,9 +93,6 @@ while t < T:
             if (t> troubleshoot):
                 print('Rank', rank, 'has recieved confirmation: ',confirm[0])
                 sys.stdout.flush()
-            # if (rank == 0) and (t> troubleshoot):
-            #     print('Policy before after confirmation',policy)
-            #     sys.stdout.flush()
             if not confirm[0]: #if cross happens
                 rcross_data = confirm[-1]
                 rec_t = rcross_data[1].update_t[-1]
@@ -132,9 +113,6 @@ while t < T:
                     sys.stdout.flush()
             else: #continue as usual
                 event_list[:] = [x for x in event_list if x[2] not in ['cross_in','shrink_in']] #there should not be crossings yet
-            # if (rank == 0) and (t> troubleshoot):
-            #     print('Policy before after confirmation',policy)
-            #     sys.stdout.flush()
         elif rank ==0: #root
             if t > troubleshoot:
                 print('Rank', rank, 'has crossed at time', t,',waiting to compare')
@@ -193,8 +171,6 @@ while t < T:
         N+=1
 end = MPI.Wtime()
 elapsed_time = end-start
-# print(rank, elapsed_time)
-# sys.stdout.flush()
 total = comm.reduce(elapsed_time, op=max, root=0)
 if rank == 0:
     print('Total time taken:', total)

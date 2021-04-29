@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from parameters import v_s, xdomain, ydomain
 
-def plot_snap(mt_list,t,k,dest='./plots3/',save=True):
+def plot_snap(rank,mt_list,t,k,dest='./plots3/',save=True):
     l = len(mt_list)
     for i in range(l):
         coord = mt_list[i].seg #get coordinates of segments
@@ -81,7 +81,7 @@ def plot_snap(mt_list,t,k,dest='./plots3/',save=True):
     plt.gca().set_aspect('equal',adjustable='box')
     figure = plt.gcf()
     figure.set_size_inches(10, 10)
-    name = 'plot_'+str(k)
+    name = str(rank)_'plot_'+str(k)
     if save:
         plt.savefig(dest+name)
     # plt.show()
